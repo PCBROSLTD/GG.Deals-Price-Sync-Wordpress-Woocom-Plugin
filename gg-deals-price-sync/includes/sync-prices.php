@@ -9,8 +9,8 @@ function ggdeals_log($message) {
 }
 
 // Main sync function using new GG.deals batch price API
-function ggdeals_update_woo_prices($debug = false) {
-    $api_key = 'YOUR_API_KEY_HERE';  // <-- Replace with your actual API key
+function ggdeals_update_woo_prices($debug = true) {
+    $api_key = 'RU3ylKjwheFdrEOCdQ_A7DtMCemz1OAH';  // <-- Replace with your actual API key
     $region = 'gb';  // Change region as needed
 
     // Get all products with Steam App IDs
@@ -69,34 +69,66 @@ function ggdeals_update_woo_prices($debug = false) {
                 continue;
             }
 
-            $prices = $game_data['prices'] ?? [];
+            $prices_data = $game_data['prices'] ?? [];
 
-            // Prefer currentKeyshops, fallback to currentRetail
-            $price_str = $prices['currentKeyshops'] ?: $prices['currentRetail'] ?: null;
+            // Parse prices
+            $retail_price_str = $prices_data['currentRetail'] ?? null;
+            $keyshop_price_str = $prices_data['currentKeyshops'] ?? null;
 
-            if ($price_str === null) {
-                if ($debug) ggdeals_log("No current price found for product ID $product_id (Steam App ID $appid), skipping.");
+            // Convert to float
+            $retail_price = $retail_price_str ? floatval($retail_price_str) : 0;
+            $keyshop_price = $keyshop_price_str ? floatval($keyshop_price_str) : 0;
+
+            if ($keyshop_price <= 0 && $retail_price <= 0) {
+                if ($debug) ggdeals_log("No valid prices for product ID $product_id, skipping.");
                 continue;
             }
 
-            $new_price = round(floatval($price_str) * 1.15, 2); // Apply 15% markup
+            // Calculate sale price with 15% markup on keyshop price (or fallback to retail if keyshop missing)
+            $base_price = ($keyshop_price > 0) ? $keyshop_price : $retail_price;
+            $sale_price = round($base_price * 1.15, 2);
 
-            $current_price = floatval(get_post_meta($product_id, '_price', true));
+            if ($retail_price <= 0) {
+                // If no retail price, fallback retail price to sale price (to avoid empty regular price)
+                $retail_price = $sale_price;
+            }
+
+            $current_sale_price = floatval(get_post_meta($product_id, '_sale_price', true));
             $current_regular_price = floatval(get_post_meta($product_id, '_regular_price', true));
+            $current_price = floatval(get_post_meta($product_id, '_price', true));
 
-            if ($current_price !== $new_price || $current_regular_price !== $new_price) {
-                update_post_meta($product_id, '_regular_price', $new_price);
-                update_post_meta($product_id, '_price', $new_price);
+            if ($debug) {
+                ggdeals_log("Product ID $product_id - Retail: £$retail_price, Sale: £$sale_price, Current Regular: £$current_regular_price, Current Sale: £$current_sale_price");
+            }
+
+            // Update if prices differ
+            if ($current_sale_price !== $sale_price || $current_regular_price !== $retail_price) {
+                update_post_meta($product_id, '_regular_price', $retail_price);
+                update_post_meta($product_id, '_sale_price', $sale_price);
+                update_post_meta($product_id, '_price', $sale_price); // WooCommerce main price field
                 update_post_meta($product_id, '_ggdeals_last_sync', current_time('mysql'));
                 wc_delete_product_transients($product_id);
 
-                if ($debug) ggdeals_log("Updated product ID $product_id price to £$new_price");
+                if ($debug) {
+                    ggdeals_log("Updated product ID $product_id prices: regular £$retail_price, sale £$sale_price");
+                }
 
-                // Fire webhook action (if hooked elsewhere)
-                do_action('ggdeals_price_updated', $product_id, $new_price);
+                do_action('ggdeals_price_updated', $product_id, $sale_price);
             } else {
-                if ($debug) ggdeals_log("No price change for product ID $product_id.");
+                if ($debug) {
+                    ggdeals_log("No price change for product ID $product_id.");
+                }
+                // Still update last sync timestamp even if no price change
+                update_post_meta($product_id, '_ggdeals_last_sync', current_time('mysql'));
             }
         }
+    }
+
+    // Clear SpeedyCache cache after syncing
+    exec('wp speedycache clear cache 2>&1', $output, $return_var);
+    if ($return_var === 0) {
+        ggdeals_log('SpeedyCache cache cleared successfully.');
+    } else {
+        ggdeals_log('Failed to clear SpeedyCache cache: ' . implode("\n", $output));
     }
 }

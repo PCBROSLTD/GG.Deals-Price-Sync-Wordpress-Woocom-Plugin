@@ -46,7 +46,7 @@ function ggdeals_sync_admin_page() {
         update_option('ggdeals_global_last_sync', current_time('mysql'));
         echo '<div class="notice notice-success"><p>Manual sync completed.</p></div>';
     }
-    echo '<button class="button button-primary" name="ggdeals_manual_sync">🔄 Sync Now</button>';
+    echo '<button class="button button-primary" name="ggdeals_manual_sync">ðŸ”„ Sync Now</button>';
     echo '</form><br>';
 
     $last_sync = get_option('ggdeals_global_last_sync');
@@ -82,7 +82,7 @@ function ggdeals_sync_admin_page() {
         echo '<tr>';
         echo '<td><a href="' . esc_url(get_edit_post_link($product->ID)) . '">' . esc_html($product->post_title) . '</a></td>';
         echo '<td>' . esc_html($appid ?: '-') . '</td>';
-        echo '<td>£' . esc_html(number_format((float)$price, 2)) . '</td>';
+        echo '<td>Â£' . esc_html(number_format((float)$price, 2)) . '</td>';
         echo '<td>' . esc_html($last_product_sync ?: '-') . '</td>';
         echo '</tr>';
     }
