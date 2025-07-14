@@ -10,7 +10,7 @@ function ggdeals_log($message) {
 
 // Main sync function using new GG.deals batch price API
 function ggdeals_update_woo_prices($debug = true) {
-    $api_key = 'RU3ylKjwheFdrEOCdQ_A7DtMCemz1OAH';  // <-- Replace with your actual API key
+    $api_key = 'YOUR_API_KEY_HERE';  // <-- Replace with your actual API key
     $region = 'gb';  // Change region as needed
 
     // Get all products with Steam App IDs
