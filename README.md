@@ -75,8 +75,7 @@ Planned enhancements include:
 
 ## 📄 License
 
-This plugin is open-source software licensed under the **MIT License**.
-See [LICENSE](LICENSE) for full terms.
+License: PC Bros Ltd Non-Commercial License – see LICENSE for details.
 
 ---
 
